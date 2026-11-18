@@ -21,8 +21,8 @@ class QS_Store {
 			'title'        => '«Programant Haydn: Les set últimes paraules de Crist a la creu»',
 			'subtitle'     => 'Concert de Setmana Santa',
 			'venue'        => 'Església Santa Magdalena (Vinaròs)',
-			'months'       => array( '2025-11', '2025-12', '2026-01', '2026-02' ),
-			'concert_date' => '2026-02-27',
+			'months'       => array( '2026-11', '2026-12', '2027-01', '2027-02' ),
+			'concert_date' => '2027-02-27',
 			'concert_time' => '20:00',
 			'start_hour'   => 10,
 			'end_hour'     => 22,
@@ -47,43 +47,6 @@ class QS_Store {
 		update_option( self::OPT_MUSICIANS, array_values( $musicians ), false );
 	}
 
-	public static function upsert_musician( $id, $name, $instrument, $changes ) {
-		$musicians = self::get_musicians();
-		$found     = false;
-
-		if ( '' !== $id ) {
-			foreach ( $musicians as $i => $mu ) {
-				if ( isset( $mu['id'] ) && $mu['id'] === $id ) {
-					if ( '' !== $name ) {
-						$musicians[ $i ]['name'] = $name;
-					}
-					if ( '' !== $instrument ) {
-						$musicians[ $i ]['instrument'] = $instrument;
-					}
-					$avail = isset( $mu['avail'] ) && is_array( $mu['avail'] ) ? $mu['avail'] : array();
-					$musicians[ $i ]['avail'] = self::merge_avail( $avail, $changes );
-					$found = true;
-					break;
-				}
-			}
-		}
-
-		if ( ! $found ) {
-			$id = 'm' . substr( md5( uniqid( '', true ) ), 0, 10 );
-			$musicians[] = array(
-				'id'         => $id,
-				'name'       => $name,
-				'instrument' => $instrument,
-				'avail'      => self::merge_avail( array(), $changes ),
-			);
-			$musicians = array_values( $musicians );
-		}
-
-		self::save_musicians( $musicians );
-
-		return $id;
-	}
-
 	private static function merge_avail( $avail, $changes ) {
 		foreach ( $changes as $date => $slots ) {
 			if ( ! isset( $avail[ $date ] ) || ! is_array( $avail[ $date ] ) ) {
@@ -101,6 +64,42 @@ class QS_Store {
 			}
 		}
 		return $avail;
+	}
+
+	/**
+	 * Crea o actualitza un músic cercant-lo pel nom (clau amigable per al formulari
+	 * públic, que no té desplegable de selecció). Fusió per nom sense distingir
+	 * majúscules ni espais extrems.
+	 */
+	public static function save_by_name( $name, $instrument, $changes ) {
+		$musicians = self::get_musicians();
+		$key       = mb_strtolower( trim( $name ) );
+
+		foreach ( $musicians as $i => $mu ) {
+			if ( ! isset( $mu['name'] ) || mb_strtolower( trim( $mu['name'] ) ) !== $key ) {
+				continue;
+			}
+			if ( '' !== $instrument ) {
+				$musicians[ $i ]['instrument'] = $instrument;
+			}
+			$avail = isset( $mu['avail'] ) && is_array( $mu['avail'] ) ? $mu['avail'] : array();
+			$musicians[ $i ]['avail'] = self::merge_avail( $avail, $changes );
+			if ( ! isset( $musicians[ $i ]['id'] ) || '' === $musicians[ $i ]['id'] ) {
+				$musicians[ $i ]['id'] = 'm' . substr( md5( uniqid( '', true ) ), 0, 10 );
+			}
+			self::save_musicians( $musicians );
+			return $musicians[ $i ]['id'];
+		}
+
+		$id = 'm' . substr( md5( uniqid( '', true ) ), 0, 10 );
+		$musicians[] = array(
+			'id'         => $id,
+			'name'       => $name,
+			'instrument' => $instrument,
+			'avail'      => self::merge_avail( array(), $changes ),
+		);
+		self::save_musicians( $musicians );
+		return $id;
 	}
 
 	public static function delete_musician( $id ) {

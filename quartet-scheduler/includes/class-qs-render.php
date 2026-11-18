@@ -1,6 +1,13 @@
 <?php
 /**
  * Renderització del calendari, el formulari tipus Doodle i el resum en text.
+ *
+ * Tota la interactivitat (pestanyes de mes, navegació de setmanes, detall de dia,
+ * selecció de disponibilitat i desat) funciona sense JavaScript:
+ *  - Pestanyes, fletxes de setmanes i dies del calendari: enllaços (GET).
+ *  - Cel·les de disponibilitat: llistes desplegables (Sí / Potser / No / —).
+ *  - Desar: formulari POST real gestionat per QS_Plugin::handle_public_save().
+ * El JavaScript només afegeix una capa estètica (colors en canviar la llista).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -165,8 +172,8 @@ class QS_Render {
 		if ( $need <= 0 ) {
 			return null;
 		}
-		$best   = null;
-		$run    = null;
+		$best = null;
+		$run  = null;
 		foreach ( $slots as $sl ) {
 			$ok = ( isset( $yes[ $sl['start'] ] ) && $yes[ $sl['start'] ] >= $need );
 			if ( $ok ) {
@@ -182,10 +189,8 @@ class QS_Render {
 				$run = null;
 			}
 		}
-		if ( null !== $run ) {
-			if ( null === $best || self::len( $run ) >= self::len( $best ) ) {
-				$best = $run;
-			}
+		if ( null !== $run && ( null === $best || self::len( $run ) >= self::len( $best ) ) ) {
+			$best = $run;
 		}
 		return $best;
 	}
@@ -196,10 +201,8 @@ class QS_Render {
 
 	private static function hm_hi( $time ) {
 		$p = explode( ':', $time );
-		return sprintf( '%d', (int) $p[0] );
+		return (string) (int) $p[0];
 	}
-
-	/* ---------- Fitxes de color del calendari ---------- */
 
 	private static function heat_class( $max, $N ) {
 		if ( $max <= 0 || $N <= 0 ) {
@@ -212,25 +215,41 @@ class QS_Render {
 
 	/* ---------- Peces de la interfície ---------- */
 
-	public static function render_app( $mid = '', $month = '', $week = 0, $day = null ) {
+	public static function render_app() {
 		$s         = QS_Store::get_settings();
 		$musicians = QS_Store::get_musicians();
 		$months    = $s['months'];
 
-		if ( '' === $month || ! in_array( $month, $months, true ) ) {
+		$month = isset( $_GET['qs_m'] ) ? sanitize_text_field( wp_unslash( $_GET['qs_m'] ) ) : '';
+		if ( ! preg_match( '/^\d{4}-\d{2}$/', $month ) || ! in_array( $month, $months, true ) ) {
 			$month = ! empty( $months ) ? $months[0] : gmdate( 'Y-m' );
 		}
 
-		$w = 0;
-		foreach ( $months as $i => $m ) {
-			if ( $m === $month ) {
-				$w = $i;
-				break;
+		$weeks = self::weeks( $month );
+		$week  = isset( $_GET['qs_w'] ) ? (int) $_GET['qs_w'] : 0;
+		$week  = max( 0, min( max( 0, count( $weeks ) - 1 ), $week ) );
+
+		$day = isset( $_GET['qs_d'] ) ? sanitize_text_field( wp_unslash( $_GET['qs_d'] ) ) : '';
+		if ( '' !== $day && ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day ) || ! in_array( substr( $day, 0, 7 ), $months, true ) ) ) {
+			$day = '';
+		}
+
+		$edit = null;
+		$mid  = isset( $_GET['qs_mid'] ) ? sanitize_text_field( wp_unslash( $_GET['qs_mid'] ) ) : '';
+		if ( '' !== $mid ) {
+			foreach ( $musicians as $mu ) {
+				if ( isset( $mu['id'] ) && $mu['id'] === $mid ) {
+					$edit = $mu;
+					break;
+				}
 			}
 		}
 
+		$just_saved = ( isset( $_GET['qs_saved'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['qs_saved'] ) ) );
+		$save_error = ( isset( $_GET['qs_error'] ) && 'name' === sanitize_text_field( wp_unslash( $_GET['qs_error'] ) ) );
+
 		ob_start();
-		echo '<div id="qs-app" class="qs-app" data-month="' . esc_attr( $month ) . '" data-week="' . (int) $week . '" data-mid="' . esc_attr( $mid ) . '" data-day="' . esc_attr( (string) $day ) . '">';
+		echo '<div id="qs-app" class="qs-app">';
 
 		echo '<header class="qs-header">';
 		echo '<h2 class="qs-title">' . esc_html( $s['title'] ) . '</h2>';
@@ -246,11 +265,11 @@ class QS_Render {
 
 		echo self::month_tabs( $s, $month );
 		echo self::calendar( $s, $musicians, $month, $day );
-		if ( '' !== (string) $day ) {
+		if ( '' !== $day ) {
 			echo self::detail( $s, $musicians, $day );
 		}
 		echo self::summary( $s, $musicians );
-		echo self::form( $s, $musicians, $mid, $month, $week );
+		echo self::form( $s, $musicians, $month, $weeks, $week, $edit, $just_saved, $save_error );
 
 		echo '</div>';
 		return ob_get_clean();
@@ -259,8 +278,9 @@ class QS_Render {
 	public static function month_tabs( $s, $current ) {
 		$html = '<nav class="qs-tabs" role="tablist">';
 		foreach ( $s['months'] as $m ) {
-			$sel  = ( $m === $current );
-			$html .= '<button type="button" class="qs-tab' . ( $sel ? ' is-active' : '' ) . '" data-month="' . esc_attr( $m ) . '">' . esc_html( self::month_label( $m ) ) . '</button>';
+			$sel   = ( $m === $current );
+			$href  = add_query_arg( array( 'qs_m' => $m, 'qs_w' => 0 ), remove_query_arg( array( 'qs_d', 'qs_saved', 'qs_error' ) ) );
+			$html .= '<a class="qs-tab' . ( $sel ? ' is-active' : '' ) . '" href="' . esc_url( $href ) . '">' . esc_html( self::month_label( $m ) ) . '</a>';
 		}
 		$html .= '</nav>';
 		return $html;
@@ -273,7 +293,7 @@ class QS_Render {
 
 		$html = '<section class="qs-card">';
 		$html .= '<h3>Calendari de coincidències</h3>';
-		$html .= '<p class="qs-hint">Feu clic a un dia per veure el detall hora per hora. Com més verd, més músics coincideixen.</p>';
+		$html .= '<p class="qs-hint">Feu clic al número d’un dia per veure el detall hora per hora. Com més verd, més músics coincideixen.</p>';
 		$html .= '<table class="qs-cal" aria-label="Calendari de ' . esc_attr( self::month_label( $month ) ) . '">';
 		$html .= '<thead><tr>';
 		foreach ( self::$days_ca_ab as $d ) {
@@ -310,13 +330,14 @@ class QS_Render {
 					$badge = '<span class="qs-badge">' . (int) $dates[ $date ]['max'] . '/' . (int) $N . '</span>';
 				}
 
-				$attrs = '';
+				$html .= '<td class="' . esc_attr( implode( ' ', $classes ) ) . '">';
+				$dnum = (int) self::dparts( $date )['d'];
 				if ( $in_month && ! $is_concert ) {
-					$attrs = ' role="button" tabindex="0" data-date="' . esc_attr( $date ) . '"';
+					$href  = add_query_arg( array( 'qs_d' => $date ), remove_query_arg( array( 'qs_saved', 'qs_error' ) ) );
+					$html .= '<a class="qs-daylink" href="' . esc_url( $href ) . '" title="Veure detall del ' . esc_attr( self::date_label( $date ) ) . '">' . $dnum . '</a>';
+				} else {
+					$html .= '<span class="qs-dnum">' . $dnum . '</span>';
 				}
-
-				$html .= '<td class="' . esc_attr( implode( ' ', $classes ) ) . '"' . $attrs . '>';
-				$html .= '<span class="qs-dnum">' . (int) self::dparts( $date )['d'] . '</span>';
 				if ( $is_concert ) {
 					$html .= '<span class="qs-concert-tag">CONCERT ' . esc_html( $s['concert_time'] ) . 'h</span>';
 				}
@@ -343,9 +364,10 @@ class QS_Render {
 		$stats = self::stats( $s, $musicians );
 		$N     = $stats['N'];
 
-		$d    = isset( $stats['dates'][ $day ] ) ? $stats['dates'][ $day ] : array( 'yes' => array(), 'maybe' => array() );
-		$html = '<section class="qs-card qs-detail">';
-		$html .= '<h3>Detall de ' . esc_html( self::date_label( $day ) ) . '</h3>';
+		$d = isset( $stats['dates'][ $day ] ) ? $stats['dates'][ $day ] : array( 'yes' => array(), 'maybe' => array() );
+
+		$html  = '<section class="qs-card qs-detail">';
+		$html .= '<h3>Detall de ' . esc_html( self::date_label( $day ) ) . ' <a class="qs-close" href="' . esc_url( remove_query_arg( 'qs_d' ) ) . '">✕ tancar</a></h3>';
 
 		if ( $day === $s['concert_date'] ) {
 			$html .= '<p class="qs-detail-concert">🎻 Aquest dia hi ha el CONCERT a les ' . esc_html( $s['concert_time'] ) . ' h. No es pot triar per assajar.</p>';
@@ -439,54 +461,48 @@ class QS_Render {
 		return $html;
 	}
 
-	public static function form( $s, $musicians, $mid, $month, $week ) {
-		$weeks  = self::weeks( $month );
-		$weeks  = array_values( array_filter( $weeks, function ( $days ) use ( $month ) {
-			foreach ( $days as $d ) {
-				if ( 0 === strpos( $d, $month . '-' ) ) {
-					return true;
-				}
-			}
-			return false;
-		} ) );
-		$week    = max( 0, min( count( $weeks ) - 1, (int) $week ) );
-		$days    = isset( $weeks[ $week ] ) ? $weeks[ $week ] : array();
-		$slots   = self::slots( $s );
-		$sel     = null;
-		foreach ( $musicians as $mu ) {
-			if ( $mu['id'] === $mid ) {
-				$sel = $mu;
-				break;
-			}
-		}
-		$av = ( $sel && isset( $sel['avail'] ) && is_array( $sel['avail'] ) ) ? $sel['avail'] : array();
+	public static function form( $s, $musicians, $month, $weeks, $week, $edit, $just_saved, $save_error ) {
+		$days  = isset( $weeks[ $week ] ) ? $weeks[ $week ] : array();
+		$slots = self::slots( $s );
+		$av    = ( $edit && isset( $edit['avail'] ) && is_array( $edit['avail'] ) ) ? $edit['avail'] : array();
 
 		$html = '<section class="qs-card qs-form">';
 		$html .= '<h3>Quadra la teva agenda</h3>';
-		$html .= '<p class="qs-hint">Tria el teu nom (o afegeix-te) i per a cada franja horària fes clic per canviar: <span class="qs-chip qs-f2">Sí</span> <span class="qs-chip qs-f1">Potser</span> <span class="qs-chip qs-f0">No</span> <span class="qs-chip qs-fx">—</span></p>';
+		$html .= '<p class="qs-hint">Escriu el teu nom i, per a cada franja horària, tria: <span class="qs-chip qs-f2">Sí</span> <span class="qs-chip qs-f1">Potser</span> <span class="qs-chip qs-f0">No</span> <span class="qs-chip qs-fx">—</span>. Desa cada setmana abans de canviar de setmana o de mes.</p>';
 
-		$html .= '<div class="qs-picker">';
-		$html .= '<label for="qs-mid">Qui ets?</label> ';
-		$html .= '<select id="qs-mid">';
-		$html .= '<option value=""' . ( null === $sel ? ' selected' : '' ) . '>— Afegeix-m’ —</option>';
-		foreach ( $musicians as $mu ) {
-			$html .= '<option value="' . esc_attr( $mu['id'] ) . '"' . ( $sel && $sel['id'] === $mu['id'] ? ' selected' : '' ) . '>' . esc_html( $mu['name'] . ( ! empty( $mu['instrument'] ) ? ' (' . $mu['instrument'] . ')' : '' ) ) . '</option>';
+		if ( $just_saved && $edit ) {
+			$html .= '<p class="qs-status qs-ok" role="status">La teva disponibilitat s’ha desat correctament ✓</p>';
 		}
-		$html .= '</select>';
-		$html .= '</div>';
+		if ( $save_error ) {
+			$html .= '<p class="qs-status qs-err" role="alert">Escriu el teu nom abans de desar.</p>';
+		}
 
-		$html .= '<div class="qs-new' . ( null === $sel ? '' : ' qs-hidden' ) . '">';
+		$html .= '<form method="post" class="qs-save-form">';
+		$html .= wp_nonce_field( 'qs_public_save', 'qs_nonce', true, false );
+		$html .= '<input type="hidden" name="qs_public_save" value="1">';
+
+		$html .= '<div class="qs-new">';
 		$html .= '<label for="qs-name">El teu nom i cognom</label><br>';
-		$html .= '<input type="text" id="qs-name" maxlength="60">';
+		$html .= '<input type="text" id="qs-name" name="qs_name" maxlength="60" value="' . esc_attr( $edit ? $edit['name'] : '' ) . '" required>';
 		$html .= '<label for="qs-instrument">Instrument</label><br>';
-		$html .= '<input type="text" id="qs-instrument" maxlength="40">';
+		$html .= '<input type="text" id="qs-instrument" name="qs_instrument" maxlength="40" value="' . esc_attr( $edit && isset( $edit['instrument'] ) ? $edit['instrument'] : '' ) . '">';
 		$html .= '</div>';
 
-		if ( ! empty( $days ) ) {
+		if ( ! empty( $days ) && ! empty( $weeks ) ) {
+			$base = remove_query_arg( array( 'qs_d', 'qs_saved', 'qs_error' ) );
+
 			$html .= '<div class="qs-weeknav">';
-			$prev = '<button type="button" class="qs-nav" data-dir="-1"' . ( 0 === $week ? ' disabled' : '' ) . ' aria-label="Setmana anterior">‹</button>';
-			$next = '<button type="button" class="qs-nav" data-dir="1"' . ( $week >= count( $weeks ) - 1 ? ' disabled' : '' ) . ' aria-label="Setmana següent">›</button>';
-			$html .= $prev . '<span class="qs-weeklabel">Setmana ' . ( $week + 1 ) . ' de ' . count( $weeks ) . '</span>' . $next;
+			if ( $week > 0 ) {
+				$html .= '<a class="qs-nav" href="' . esc_url( add_query_arg( 'qs_w', $week - 1, $base ) ) . '" aria-label="Setmana anterior">‹</a>';
+			} else {
+				$html .= '<span class="qs-nav qs-nav-off" aria-hidden="true">‹</span>';
+			}
+			$html .= '<span class="qs-weeklabel">Setmana ' . ( $week + 1 ) . ' de ' . count( $weeks ) . '</span>';
+			if ( $week < count( $weeks ) - 1 ) {
+				$html .= '<a class="qs-nav" href="' . esc_url( add_query_arg( 'qs_w', $week + 1, $base ) ) . '" aria-label="Setmana següent">›</a>';
+			} else {
+				$html .= '<span class="qs-nav qs-nav-off" aria-hidden="true">›</span>';
+			}
 			$html .= '</div>';
 
 			$html .= '<div class="qs-tablewrap"><table class="qs-grid"><thead><tr><th>' . esc_html( self::month_label( $month ) ) . '</th>';
@@ -510,23 +526,25 @@ class QS_Render {
 						$html .= '<td class="qs-cellconcert" title="Concert — ' . esc_attr( $s['concert_time'] ) . ' h">🎻</td>';
 						continue;
 					}
-					$st = '';
-					if ( isset( $av[ $date ][ $sl['start'] ] ) ) {
-						$st = (string) (int) $av[ $date ][ $sl['start'] ];
+					$st   = isset( $av[ $date ][ $sl['start'] ] ) ? (string) (int) $av[ $date ][ $sl['start'] ] : '';
+					$cls  = 'qs-sel' . ( '' !== $st ? ' qs-f' . (int) $st : '' );
+					$html .= '<td><select class="' . esc_attr( $cls ) . '" name="qs_a[' . esc_attr( $date ) . '][' . esc_attr( $sl['start'] ) . ']" aria-label="' . esc_attr( self::date_label( $date ) . ' ' . $sl['start'] ) . '">';
+					foreach ( array( '' => '—', '2' => 'Sí', '1' => 'Potser', '0' => 'No' ) as $v => $label ) {
+						$html .= '<option value="' . esc_attr( $v ) . '"' . ( (string) $st === (string) $v ? ' selected' : '' ) . '>' . esc_html( $label ) . '</option>';
 					}
-					$cls = 'qs-cell' . ( '' !== $st ? ' qs-f' . (int) $st : '' );
-					$html .= '<td><button type="button" class="' . esc_attr( $cls ) . '" data-date="' . esc_attr( $date ) . '" data-slot="' . esc_attr( $sl['start'] ) . '" data-st="' . esc_attr( $st ) . '" aria-label="' . esc_attr( self::date_label( $date ) . ' ' . $sl['start'] ) . '"></button></td>';
+					$html .= '</select></td>';
 				}
 				$html .= '</tr>';
 			}
 			$html .= '</tbody></table></div>';
 
 			$html .= '<div class="qs-savebar">';
-			$html .= '<button type="button" id="qs-save" class="qs-btn">Desar la meva disponibilitat</button>';
-			$html .= '<span id="qs-status" class="qs-status" role="status"></span>';
+			$html .= '<button type="submit" class="qs-btn">Desar la meva disponibilitat</button>';
+			$html .= '<span class="qs-savenote">es desen tots els dies d’aquesta setmana</span>';
 			$html .= '</div>';
 		}
 
+		$html .= '</form>';
 		$html .= '</section>';
 		return $html;
 	}

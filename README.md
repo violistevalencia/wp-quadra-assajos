@@ -2,7 +2,7 @@
 
 Plugin de WordPress **«Programant Haydn: Les set últimes paraules de Crist a la creu»** — Quadra d'assajos del quartet.
 
-Planificador d'estil Doodle per quadrar les agendes dels músics: cada músic marca els dies i hores disponibles i el calendari mostra les millors coincidències, amb el concert del 27 de febrer destacat com a data inamovible.
+Planificador d'estil Doodle per quadrar les agendes dels músics: cada músic marca els dies i hores disponibles (novembre 2026 – febrer 2027) i el calendari mostra les millors coincidències, amb el concert del dissabte 27 de febrer de 2027 destacat com a data inamovible.
 
 ## Instal·lació ràpida
 

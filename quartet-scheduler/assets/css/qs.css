@@ -21,6 +21,7 @@
 .qs-tab {
 	border: 1px solid #c3cfdd; background: #fff; color: #33465c;
 	padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: .95em;
+	text-decoration: none; display: inline-block;
 }
 .qs-tab:hover { background: #eef3f8; }
 .qs-tab.is-active { background: #33465c; border-color: #33465c; color: #fff; font-weight: 600; }
@@ -42,9 +43,11 @@
 .qs-h1, .qs-h2 { color: #1f2933; }
 .qs-h3, .qs-h4 { color: #fff; }
 
-.qs-day[data-date] { cursor: pointer; }
-.qs-day[data-date]:hover { box-shadow: inset 0 0 0 2px #3380c4; }
 .qs-day.qs-sel { box-shadow: inset 0 0 0 2px #3380c4; }
+.qs-daylink { color: inherit; text-decoration: none; font-weight: 700; padding: 3px 5px; border-radius: 6px; }
+.qs-daylink:hover { background: rgba(51, 128, 196, .18); text-decoration: underline; }
+.qs-close { font-size: .6em; font-weight: 400; margin-left: 10px; color: #3380c4; text-decoration: none; }
+.qs-close:hover { text-decoration: underline; }
 .qs-out { background: #fcfdfe !important; color: #b6c2cf; cursor: default !important; box-shadow: none !important; }
 
 .qs-dnum { font-weight: 700; font-size: .95em; }
@@ -95,7 +98,8 @@
 	background: #fff; font-size: 1.2em; cursor: pointer; line-height: 1;
 }
 .qs-nav:hover:not(:disabled) { background: #eef3f8; }
-.qs-nav:disabled { opacity: .35; cursor: default; }
+.qs-nav:disabled, .qs-nav-off { opacity: .35; cursor: default; }
+a.qs-nav { text-decoration: none; color: #33465c; display: inline-flex; align-items: center; justify-content: center; }
 .qs-weeklabel { font-weight: 600; }
 
 .qs-tablewrap { overflow-x: auto; }
@@ -105,14 +109,15 @@
 .qs-slottime { text-align: left !important; width: 70px; font-size: .88em; color: #33465c; white-space: nowrap; }
 .qs-th.qs-out { color: #c3cfdd; }
 
-.qs-cell {
-	width: 100%; aspect-ratio: 3 / 2; min-width: 44px; min-height: 30px;
+.qs-sel {
+	width: 100%; min-width: 46px; padding: 5px 2px; font-size: .82em;
 	border: 1px solid #c3cfdd; border-radius: 7px; background: #fff; cursor: pointer;
 }
-.qs-cell:hover { border-color: #3380c4; }
-.qs-f2 { background: #2e8b2e; border-color: #2e8b2e; }
-.qs-f1 { background: #f4c430; border-color: #d9a90d; }
-.qs-f0 { background: #c9d4de; border-color: #aebbca; }
+.qs-sel:hover { border-color: #3380c4; }
+.qs-sel.qs-f2 { background: #2e8b2e; border-color: #2e8b2e; }
+.qs-sel.qs-f1 { background: #f4c430; border-color: #d9a90d; }
+.qs-sel.qs-f0 { background: #c9d4de; border-color: #aebbca; }
+.qs-sel.qs-f2 option, .qs-sel.qs-f1 option, .qs-sel.qs-f0 option { background: #fff; color: #1f2933; }
 td.qs-cellconcert { color: #7b1fa2; font-size: 1.05em; background: #f4ebfb; border-radius: 7px; }
 
 .qs-chip { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .82em; border: 1px solid #c3cfdd; }
@@ -129,6 +134,10 @@ td.qs-cellconcert { color: #7b1fa2; font-size: 1.05em; background: #f4ebfb; bord
 .qs-btn:hover { background: #22303f; }
 .qs-btn:disabled { opacity: .6; cursor: wait; }
 .qs-status { font-weight: 600; }
+p.qs-status { padding: 8px 12px; border-radius: 8px; }
+p.qs-status.qs-ok { color: #2e8b2e; background: #e7f3e7; border: 1px solid #9fd19f; }
+p.qs-status.qs-err { color: #b3261e; background: #fdecea; border: 1px solid #f2b8b5; }
+.qs-savenote { color: #61758a; font-size: .88em; }
 .qs-status.qs-ok { color: #2e8b2e; }
 .qs-status.qs-err { color: #b3261e; }
 

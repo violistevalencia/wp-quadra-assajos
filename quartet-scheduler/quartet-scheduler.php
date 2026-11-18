@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name:       Programant Haydn — Quadra d'assajos
- * Plugin URI:        https://example.com/programant-haydn
- * Description:       Planificador d'estil Doodle per quadrar les disponibilitats dels músics d'un quartet: formulari senzill, calendari visual de coincidències i resum en text. Inclou el dia del concert destacat com a data clau i inamovible.
- * Version:           1.0.0
+ * Plugin URI:        https://github.com/violistevalencia/wp-quadra-assajos
+ * Description:       Planificador d'estil Doodle per quadrar les disponibilitats dels músics d'un quartet: formulari senzill, calendari visual de coincidències i resum en text. Inclou el dia del concert destacat com a data clau i inamovible. Funciona sense JavaScript.
+ * Version:           1.1.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Quartet Vinaròs
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'QS_VERSION', '1.0.0' );
+define( 'QS_VERSION', '1.1.0' );
 define( 'QS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'QS_URL', plugin_dir_url( __FILE__ ) );
 
@@ -37,16 +37,14 @@ final class QS_Plugin {
 	private function __construct() {
 		register_activation_hook( QS_DIR . 'quartet-scheduler.php', array( __CLASS__, 'activate' ) );
 
+		add_action( 'init', array( $this, 'handle_public_save' ) );
 		add_action( 'init', array( $this, 'register_shortcodes' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
 
-		add_action( 'wp_ajax_qs_render', array( $this, 'ajax_render' ) );
-		add_action( 'wp_ajax_nopriv_qs_render', array( $this, 'ajax_render' ) );
-		add_action( 'wp_ajax_qs_save', array( $this, 'ajax_save' ) );
-		add_action( 'wp_ajax_nopriv_qs_save', array( $this, 'ajax_save' ) );
-
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'handle_admin_actions' ) );
+
+		$this->upgrade();
 	}
 
 	public static function activate() {
@@ -56,6 +54,31 @@ final class QS_Plugin {
 		if ( false === get_option( QS_Store::OPT_MUSICIANS, false ) ) {
 			add_option( QS_Store::OPT_MUSICIANS, array() );
 		}
+		update_option( 'qs_version', QS_VERSION, true );
+	}
+
+	/**
+	 * Migra la configuració antiga (campanya 2025-2026) a la nova (2026-2027)
+	 * si l'usuari no l'havia personalitzada.
+	 */
+	public function upgrade() {
+		if ( QS_VERSION === get_option( 'qs_version', '' ) ) {
+			return;
+		}
+		$s = get_option( QS_Store::OPT_SETTINGS, array() );
+		if ( ! is_array( $s ) ) {
+			$s = array();
+		}
+		$d = QS_Store::defaults();
+
+		if ( isset( $s['months'] ) && array( '2025-11', '2025-12', '2026-01', '2026-02' ) === $s['months'] ) {
+			$s['months'] = $d['months'];
+		}
+		if ( isset( $s['concert_date'] ) && '2026-02-27' === $s['concert_date'] ) {
+			$s['concert_date'] = $d['concert_date'];
+		}
+		update_option( QS_Store::OPT_SETTINGS, $s, false );
+		update_option( 'qs_version', QS_VERSION, true );
 	}
 
 	/* ---------- Frontend ---------- */
@@ -74,100 +97,62 @@ final class QS_Plugin {
 		wp_enqueue_style( 'qs-style' );
 		wp_enqueue_script( 'qs-script' );
 
-		wp_localize_script( 'qs-script', 'qsData', array(
-			'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-			'nonce'    => wp_create_nonce( 'qs-nonce' ),
-			'i18n'     => array(
-				'loading'   => 'Carregant…',
-				'saveError' => 'No s’ha pogut desar. Torna-ho a provar.',
-				'needName'  => 'Escriu el teu nom abans de desar.',
-				'needPick'  => 'Tria el teu nom a la llista o omple el formulari de nou músic.',
-			),
-		) );
-
-		$settings = QS_Store::get_settings();
-		$months   = $settings['months'];
-		$month    = ! empty( $months ) ? $months[0] : gmdate( 'Y-m' );
-
-		return QS_Render::render_app( '', $month, 0, null );
+		return QS_Render::render_app();
 	}
 
-	/* ---------- AJAX ---------- */
-
-	private function get_request_args() {
-		$settings = QS_Store::get_settings();
-		$months   = $settings['months'];
-
-		$month = isset( $_POST['month'] ) ? sanitize_text_field( wp_unslash( $_POST['month'] ) ) : '';
-		if ( ! preg_match( '/^\d{4}-\d{2}$/', $month ) || ! in_array( $month, $months, true ) ) {
-			$month = ! empty( $months ) ? $months[0] : gmdate( 'Y-m' );
+	/**
+	 * Formulari públic sense AJAX: envii per POST, desa i redirigeix (patró PRG),
+	 * de manera que funcioni encara que el navegador bloquegi JavaScript.
+	 */
+	public function handle_public_save() {
+		if ( empty( $_POST['qs_public_save'] ) || is_admin() ) {
+			return;
 		}
+		check_admin_referer( 'qs_public_save', 'qs_nonce' );
 
-		$week = isset( $_POST['week'] ) ? absint( $_POST['week'] ) : 0;
-		$day  = isset( $_POST['day'] ) ? sanitize_text_field( wp_unslash( $_POST['day'] ) ) : '';
-		if ( '' !== $day && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day ) ) {
-			$day = '';
-		}
+		$s      = QS_Store::get_settings();
+		$months = $s['months'];
+		$name   = isset( $_POST['qs_name'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['qs_name'] ) ) ) : '';
+		$instr  = isset( $_POST['qs_instrument'] ) ? sanitize_text_field( wp_unslash( $_POST['qs_instrument'] ) ) : '';
 
-		$mid = isset( $_POST['mid'] ) ? sanitize_text_field( wp_unslash( $_POST['mid'] ) ) : '';
-
-		return array( $month, $week, $day, $mid );
-	}
-
-	public function ajax_render() {
-		check_ajax_referer( 'qs-nonce', 'nonce' );
-
-		list( $month, $week, $day, $mid ) = $this->get_request_args();
-
-		wp_send_json_success( array(
-			'html' => QS_Render::render_app( $mid, $month, $week, $day ),
-		) );
-	}
-
-	public function ajax_save() {
-		check_ajax_referer( 'qs-nonce', 'nonce' );
-
-		list( , , , $mid ) = $this->get_request_args();
-
-		$name       = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
-		$instrument = isset( $_POST['instrument'] ) ? sanitize_text_field( wp_unslash( $_POST['instrument'] ) ) : '';
-
-		if ( '' === $mid && '' === trim( $name ) ) {
-			wp_send_json_error( 'Escriu el teu nom abans de desar.' );
+		if ( '' === $name ) {
+			wp_safe_redirect( add_query_arg( 'qs_error', 'name', remove_query_arg( array( 'qs_saved', 'qs_error', 'qs_mid' ) ) ) );
+			exit;
 		}
 
 		$changes = array();
-		if ( isset( $_POST['changes'] ) ) {
-			$decoded = json_decode( wp_unslash( $_POST['changes'] ), true );
-			if ( is_array( $decoded ) ) {
-				foreach ( $decoded as $date => $slots ) {
-					if ( ! is_string( $date ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) || ! is_array( $slots ) ) {
+		if ( isset( $_POST['qs_a'] ) && is_array( $_POST['qs_a'] ) ) {
+			foreach ( wp_unslash( $_POST['qs_a'] ) as $date => $slots_av ) {
+				if ( ! is_string( $date ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+					continue;
+				}
+				if ( ! in_array( substr( $date, 0, 7 ), $months, true ) || $date === $s['concert_date'] ) {
+					continue;
+				}
+				if ( ! is_array( $slots_av ) ) {
+					continue;
+				}
+				foreach ( $slots_av as $slot => $v ) {
+					if ( ! is_string( $slot ) || ! preg_match( '/^\d{1,2}:\d{2}$/', $slot ) ) {
 						continue;
 					}
-					foreach ( $slots as $slot => $st ) {
-						if ( ! is_string( $slot ) || ! preg_match( '/^\d{1,2}:\d{2}$/', $slot ) ) {
-							continue;
-						}
-						$st = is_null( $st ) ? '' : (string) (int) $st;
-						if ( '0' === $st || '1' === $st || '2' === $st ) {
-							$changes[ $date ][ $slot ] = (int) $st;
-						} elseif ( '' === $st ) {
-							$changes[ $date ][ $slot ] = null;
-						}
+					$v = (string) $v;
+					if ( in_array( $v, array( '0', '1', '2' ), true ) ) {
+						$changes[ $date ][ $slot ] = (int) $v;
+					} elseif ( '' === $v ) {
+						$changes[ $date ][ $slot ] = null;
 					}
 				}
 			}
 		}
 
-		$new_id = QS_Store::upsert_musician( $mid, $name, $instrument, $changes );
+		$mid = QS_Store::save_by_name( $name, $instr, $changes );
 
-		list( $month ) = $this->get_request_args();
-
-		wp_send_json_success( array(
-			'mid'     => $new_id,
-			'message' => 'La teva disponibilitat s’ha desat correctament ✓',
-			'html'    => QS_Render::render_app( $new_id, $month, 0, null ),
-		) );
+		$back = remove_query_arg( array( 'qs_saved', 'qs_error' ) );
+		$back = add_query_arg( 'qs_saved', '1', $back );
+		$back = add_query_arg( 'qs_mid', rawurlencode( $mid ), $back );
+		wp_safe_redirect( $back );
+		exit;
 	}
 
 	/* ---------- Admin ---------- */
@@ -276,7 +261,7 @@ final class QS_Plugin {
 					<tr>
 						<th scope="row"><label for="qs_months">Mesos (AAAA-MM, separats per comes)</label></th>
 						<td><input type="text" id="qs_months" name="qs_months" class="regular-text" value="<?php echo esc_attr( implode( ', ', $s['months'] ) ); ?>">
-							<p class="description">Per exemple: <code>2025-11, 2025-12, 2026-01, 2026-02</code></p></td>
+							<p class="description">Per exemple: <code>2026-11, 2026-12, 2027-01, 2027-02</code></p></td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="qs_concert_date">Data del concert (inamovible)</label></th>
