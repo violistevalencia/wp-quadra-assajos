@@ -1,0 +1,141 @@
+.qs-app * { box-sizing: border-box; }
+.qs-app { font-family: inherit; color: #1f2933; max-width: 900px; margin: 0 auto; }
+.qs-app h2, .qs-app h3, .qs-app h4 { margin: 0 0 .35em; }
+.qs-hidden { display: none !important; }
+
+/* ---------- Capçalera i cartell del concert ---------- */
+.qs-header { text-align: center; margin-bottom: 18px; }
+.qs-title { font-size: 1.6em; line-height: 1.25; }
+.qs-subtitle { margin: .2em 0 1em; color: #52606d; }
+.qs-concert-banner {
+	display: flex; align-items: center; gap: 14px;
+	margin: 0 auto; padding: 14px 18px; width: fit-content; max-width: 100%;
+	background: linear-gradient(135deg, #4a148c, #7b1fa2 60%, #b39ddb);
+	color: #fff; border-radius: 14px; box-shadow: 0 6px 18px rgba(74, 20, 140, .35);
+	text-align: left; line-height: 1.45; font-size: 1.02em;
+}
+.qs-concert-ico { font-size: 1.9em; }
+
+/* ---------- Pestanyes de mes ---------- */
+.qs-tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px; }
+.qs-tab {
+	border: 1px solid #c3cfdd; background: #fff; color: #33465c;
+	padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: .95em;
+}
+.qs-tab:hover { background: #eef3f8; }
+.qs-tab.is-active { background: #33465c; border-color: #33465c; color: #fff; font-weight: 600; }
+
+/* ---------- Targetes ---------- */
+.qs-card { background: #fff; border: 1px solid #dde4ec; border-radius: 14px; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 2px 6px rgba(31, 41, 51, .05); }
+.qs-hint { color: #52606d; font-size: .92em; margin-top: 0; }
+
+/* ---------- Calendari mensual ---------- */
+.qs-cal { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.qs-cal th { font-size: .8em; text-transform: uppercase; letter-spacing: .04em; color: #61758a; padding: 6px 2px; }
+.qs-cal td { height: 62px; border: 1px solid #e6ecf2; text-align: left; vertical-align: top; padding: 5px 6px; position: relative; transition: box-shadow .1s; }
+
+.qs-h0 { background: #f6f8fa; }
+.qs-h1 { background: #e7f3e7; }
+.qs-h2 { background: #bfe3bf; }
+.qs-h3 { background: #6cc06c; }
+.qs-h4 { background: #2e8b2e; }
+.qs-h1, .qs-h2 { color: #1f2933; }
+.qs-h3, .qs-h4 { color: #fff; }
+
+.qs-day[data-date] { cursor: pointer; }
+.qs-day[data-date]:hover { box-shadow: inset 0 0 0 2px #3380c4; }
+.qs-day.qs-sel { box-shadow: inset 0 0 0 2px #3380c4; }
+.qs-out { background: #fcfdfe !important; color: #b6c2cf; cursor: default !important; box-shadow: none !important; }
+
+.qs-dnum { font-weight: 700; font-size: .95em; }
+.qs-badge {
+	display: inline-block; margin-top: 3px; margin-left: 4px;
+	font-size: .72em; font-weight: 700; padding: 1px 6px;
+	background: rgba(255, 255, 255, .85); border-radius: 999px; color: #2e5d2e;
+}
+.qs-h3 .qs-badge, .qs-h4 .qs-badge { background: rgba(255, 255, 255, .9); color: #2e8b2e; }
+
+.qs-day.qs-concert, td.qs-concert {
+	background: linear-gradient(135deg, #4a148c, #7b1fa2) !important; color: #fff; cursor: default !important;
+	box-shadow: inset 0 0 0 3px #f6c445;
+}
+.qs-concert-tag { display: block; font-size: .62em; font-weight: 800; letter-spacing: .05em; color: #f6c445; margin-top: 3px; }
+.qs-badge-concert { background: rgba(255,255,255,.9); color: #7b1fa2; }
+
+.qs-legend { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; color: #52606d; font-size: .88em; }
+.qs-legend-item { display: inline-flex; align-items: center; gap: 5px; }
+.qs-legend-item i { width: 16px; height: 16px; border: 1px solid #d3dbe4; display: inline-block; }
+
+/* ---------- Detall d'un dia ---------- */
+.qs-bar-row { display: flex; align-items: center; gap: 10px; margin: 5px 0; font-size: .9em; }
+.qs-bar-time { width: 84px; color: #52606d; flex-shrink: 0; }
+.qs-bar-track { flex: 1; height: 14px; background: #eef2f6; border-radius: 999px; overflow: hidden; }
+.qs-bar-fill { display: block; height: 100%; background: #2e8b2e; border-radius: 999px; }
+.qs-bar-num { width: 130px; color: #52606d; flex-shrink: 0; }
+.qs-detail-concert { font-size: 1.05em; color: #4a148c; font-weight: 600; }
+
+/* ---------- Resum de text ---------- */
+.qs-summary h4 { margin-top: 14px; }
+.qs-summary h4:first-of-type { margin-top: 8px; }
+.qs-list { margin: 6px 0 0; padding-left: 18px; }
+.qs-list li { margin: 4px 0; }
+.qs-empty { color: #82690f; background: #fdf6dc; border: 1px solid #f1e3a3; border-radius: 8px; padding: 8px 12px; }
+
+/* ---------- Formulari Doodle ---------- */
+.qs-picker { display: flex; align-items: center; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
+.qs-picker select { padding: 7px 10px; border-radius: 8px; border: 1px solid #c3cfdd; font-size: 1em; }
+.qs-new { background: #f4f7fb; border: 1px dashed #c3cfdd; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; max-width: 420px; }
+.qs-new label { font-size: .88em; color: #52606d; display: inline-block; margin-top: 8px; }
+.qs-new label:first-child { margin-top: 0; }
+.qs-new input { width: 100%; padding: 8px 10px; border: 1px solid #c3cfdd; border-radius: 8px; font-size: 1em; margin-top: 2px; }
+
+.qs-weeknav { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0 10px; }
+.qs-nav {
+	width: 38px; height: 38px; border-radius: 50%; border: 1px solid #c3cfdd;
+	background: #fff; font-size: 1.2em; cursor: pointer; line-height: 1;
+}
+.qs-nav:hover:not(:disabled) { background: #eef3f8; }
+.qs-nav:disabled { opacity: .35; cursor: default; }
+.qs-weeklabel { font-weight: 600; }
+
+.qs-tablewrap { overflow-x: auto; }
+.qs-grid { border-collapse: collapse; width: 100%; min-width: 520px; }
+.qs-grid th, .qs-grid td { padding: 4px; text-align: center; }
+.qs-grid thead th { font-size: .82em; text-transform: uppercase; color: #61758a; padding-bottom: 6px; }
+.qs-slottime { text-align: left !important; width: 70px; font-size: .88em; color: #33465c; white-space: nowrap; }
+.qs-th.qs-out { color: #c3cfdd; }
+
+.qs-cell {
+	width: 100%; aspect-ratio: 3 / 2; min-width: 44px; min-height: 30px;
+	border: 1px solid #c3cfdd; border-radius: 7px; background: #fff; cursor: pointer;
+}
+.qs-cell:hover { border-color: #3380c4; }
+.qs-f2 { background: #2e8b2e; border-color: #2e8b2e; }
+.qs-f1 { background: #f4c430; border-color: #d9a90d; }
+.qs-f0 { background: #c9d4de; border-color: #aebbca; }
+td.qs-cellconcert { color: #7b1fa2; font-size: 1.05em; background: #f4ebfb; border-radius: 7px; }
+
+.qs-chip { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .82em; border: 1px solid #c3cfdd; }
+.qs-chip.qs-f2 { background: #2e8b2e; border-color: #2e8b2e; color: #fff; }
+.qs-chip.qs-f1 { background: #f4c430; border-color: #d9a90d; }
+.qs-chip.qs-f0 { background: #c9d4de; border-color: #aebbca; }
+.qs-chip.qs-fx { background: #fff; color: #61758a; }
+
+.qs-savebar { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+.qs-btn {
+	background: #33465c; color: #fff; border: 0; border-radius: 999px;
+	padding: 11px 22px; font-size: 1em; font-weight: 600; cursor: pointer;
+}
+.qs-btn:hover { background: #22303f; }
+.qs-btn:disabled { opacity: .6; cursor: wait; }
+.qs-status { font-weight: 600; }
+.qs-status.qs-ok { color: #2e8b2e; }
+.qs-status.qs-err { color: #b3261e; }
+
+/* Responsive */
+@media (max-width: 600px) {
+	.qs-title { font-size: 1.3em; }
+	.qs-cal td { height: 50px; padding: 3px 4px; }
+	.qs-bar-num { width: auto; }
+	.qs-concert-banner { flex-direction: column; text-align: center; }
+}
