@@ -15,6 +15,7 @@ class QS_Store {
 
 	const OPT_SETTINGS  = 'qs_settings';
 	const OPT_MUSICIANS = 'qs_musicians';
+	const OPT_REV       = 'qs_rev';
 
 	public static function defaults() {
 		return array(
@@ -45,6 +46,19 @@ class QS_Store {
 
 	private static function save_musicians( $musicians ) {
 		update_option( self::OPT_MUSICIANS, array_values( $musicians ), false );
+		self::bump_rev();
+	}
+
+	/**
+	 * Marcador de revisió: canvia cada vegada que es modifiquen músics o
+	 * disponibilitats. Serveix per invalidar la memòria temporal del navegador.
+	 */
+	public static function rev() {
+		return (string) (int) get_option( self::OPT_REV, 0 );
+	}
+
+	private static function bump_rev() {
+		update_option( self::OPT_REV, ( (int) get_option( self::OPT_REV, 0 ) ) + 1, true );
 	}
 
 	private static function merge_avail( $avail, $changes ) {
@@ -117,5 +131,6 @@ class QS_Store {
 	public static function reset_all() {
 		delete_option( self::OPT_MUSICIANS );
 		add_option( self::OPT_MUSICIANS, array() );
+		self::bump_rev();
 	}
 }

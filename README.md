@@ -1,6 +1,6 @@
 # wp-quadra-assajos
 
-Plugin de WordPress **«Programant Haydn: Les set últimes paraules de Crist a la creu»** — Quadra d'assajos del quartet.
+Plugin de WordPress **«Programant Haydn: Les set últimes paraules de Crist a la creu»** — Quadra d'assajos del quartet (v1.2.0).
 
 Planificador d'estil Doodle per quadrar les agendes dels músics: cada músic marca els dies i hores disponibles (novembre 2026 – febrer 2027) i el calendari mostra les millors coincidències, amb el concert del dissabte 27 de febrer de 2027 destacat com a data inamovible.
 

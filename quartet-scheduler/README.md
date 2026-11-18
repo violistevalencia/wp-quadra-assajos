@@ -34,7 +34,7 @@ A la pàgina amb el shortcode, cada músic:
    - **Potser** (groc)
    - **No** puc (gris)
    - **—** — sense respondre
-4. Prem **Desar la meva disponibilitat**. Es desen tots els dies de la setmana visible; desa cada setmana abans de navegar a una altra.
+4. Prem **Desar la meva disponibilitat** quan acabis. **Pots navegar lliurement entre setmanes i mesos sense perdre res**: les tries i el nom es guarden temporalment al navegador i, en desar, s'envia tot de cop (tots els mesos).
 
 El dia del concert (27 de febrer) no és seleccionable: hi ha el concert, és inamovible.
 
@@ -47,8 +47,13 @@ Sobre la graella del formulari tens:
   - 🎯 Dies on **coincideixen tots** (el quartet sencer) amb la millor franja horària.
   - 📊 **Millors dies** classificats per nombre de músics disponibles, amb la millor franja de cadascun.
 
+### Memòria i desat en bloc
+- El nom, l'instrument i totes les tries es guarden al navegador (*localStorage*) mentre ompliu el formulari: podeu tancar la pàgina, canviar de setmana o de mes i no es perd res.
+- El botó **Desar la meva disponibilitat** envia tot de cop al servidor (tots els dies de tots els mesos); les dades ja desades que no toqueu es mantenen.
+- Si les dades canviades des d'un altre lloc (per exemple, esborradas des de l'administració), la memòria temporal s'invalida automàticament.
+
 ### Sense JavaScript
-Pestanyes, fletxes de setmanes, detall de dia i el botó de desar funcionen amb enllaços i un formulari POST normal (patró PRG): tot funciona encara que el navegador o una extensió bloquegi JavaScript. Si JavaScript està actiu, les llistes es tenyeixen de color en triar, com a extra.
+Pestanyes, fletxes de setmanes, detall de dia i el botó de desar funcionen amb enllaços i un formulari POST normal (patró PRG): tot funciona encara que el navegador o una extensió bloquegi JavaScript (en aquest cas cal desar setmana per setmana). Amb JavaScript actiu hi ha, a més, memòria entre pàgines i colors a les llistes.
 
 ## Configuració (administració)
 

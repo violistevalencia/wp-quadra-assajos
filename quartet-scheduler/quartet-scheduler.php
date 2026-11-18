@@ -3,7 +3,7 @@
  * Plugin Name:       Programant Haydn — Quadra d'assajos
  * Plugin URI:        https://github.com/violistevalencia/wp-quadra-assajos
  * Description:       Planificador d'estil Doodle per quadrar les disponibilitats dels músics d'un quartet: formulari senzill, calendari visual de coincidències i resum en text. Inclou el dia del concert destacat com a data clau i inamovible. Funciona sense JavaScript.
- * Version:           1.1.0
+ * Version:           1.2.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Quartet Vinaròs
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'QS_VERSION', '1.1.0' );
+define( 'QS_VERSION', '1.2.0' );
 define( 'QS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'QS_URL', plugin_dir_url( __FILE__ ) );
 
@@ -101,7 +101,7 @@ final class QS_Plugin {
 	}
 
 	/**
-	 * Formulari públic sense AJAX: envii per POST, desa i redirigeix (patró PRG),
+	 * Formulari públic sense AJAX: s'envia per POST, es desa i redirigeix (patró PRG),
 	 * de manera que funcioni encara que el navegador bloquegi JavaScript.
 	 */
 	public function handle_public_save() {
@@ -121,29 +121,16 @@ final class QS_Plugin {
 		}
 
 		$changes = array();
-		if ( isset( $_POST['qs_a'] ) && is_array( $_POST['qs_a'] ) ) {
-			foreach ( wp_unslash( $_POST['qs_a'] ) as $date => $slots_av ) {
-				if ( ! is_string( $date ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
-					continue;
-				}
-				if ( ! in_array( substr( $date, 0, 7 ), $months, true ) || $date === $s['concert_date'] ) {
-					continue;
-				}
-				if ( ! is_array( $slots_av ) ) {
-					continue;
-				}
-				foreach ( $slots_av as $slot => $v ) {
-					if ( ! is_string( $slot ) || ! preg_match( '/^\d{1,2}:\d{2}$/', $slot ) ) {
-						continue;
-					}
-					$v = (string) $v;
-					if ( in_array( $v, array( '0', '1', '2' ), true ) ) {
-						$changes[ $date ][ $slot ] = (int) $v;
-					} elseif ( '' === $v ) {
-						$changes[ $date ][ $slot ] = null;
-					}
-				}
+		// Esborrany complet del navegador (totes les setmanes i mesos marcats).
+		if ( isset( $_POST['qs_draft'] ) ) {
+			$decoded = json_decode( wp_unslash( $_POST['qs_draft'] ), true );
+			if ( is_array( $decoded ) ) {
+				$changes = self::normalize_avail( $decoded, $s );
 			}
+		}
+		// Les llistes desplegables de la setmana visible tenen prioritat.
+		if ( isset( $_POST['qs_a'] ) && is_array( $_POST['qs_a'] ) ) {
+			$changes = array_replace_recursive( $changes, self::normalize_avail( wp_unslash( $_POST['qs_a'] ), $s ) );
 		}
 
 		$mid = QS_Store::save_by_name( $name, $instr, $changes );
@@ -153,6 +140,38 @@ final class QS_Plugin {
 		$back = add_query_arg( 'qs_mid', rawurlencode( $mid ), $back );
 		wp_safe_redirect( $back );
 		exit;
+	}
+
+	/**
+	 * Normalitza un mapa date => slot => estat (''|0|1|2) validant format,
+	 * mesos configurats i dia del concert.
+	 */
+	private static function normalize_avail( $map, $s ) {
+		$months  = $s['months'];
+		$changes = array();
+		foreach ( (array) $map as $date => $slots_av ) {
+			if ( ! is_string( $date ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+				continue;
+			}
+			if ( ! in_array( substr( $date, 0, 7 ), $months, true ) || $date === $s['concert_date'] ) {
+				continue;
+			}
+			if ( ! is_array( $slots_av ) ) {
+				continue;
+			}
+			foreach ( $slots_av as $slot => $v ) {
+				if ( ! is_string( $slot ) || ! preg_match( '/^\d{1,2}:\d{2}$/', $slot ) ) {
+					continue;
+				}
+				$v = (string) $v;
+				if ( in_array( $v, array( '0', '1', '2' ), true ) ) {
+					$changes[ $date ][ $slot ] = (int) $v;
+				} elseif ( '' === $v ) {
+					$changes[ $date ][ $slot ] = null;
+				}
+			}
+		}
+		return $changes;
 	}
 
 	/* ---------- Admin ---------- */

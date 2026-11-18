@@ -249,7 +249,7 @@ class QS_Render {
 		$save_error = ( isset( $_GET['qs_error'] ) && 'name' === sanitize_text_field( wp_unslash( $_GET['qs_error'] ) ) );
 
 		ob_start();
-		echo '<div id="qs-app" class="qs-app">';
+		echo '<div id="qs-app" class="qs-app" data-rev="' . esc_attr( QS_Store::rev() ) . '">';
 
 		echo '<header class="qs-header">';
 		echo '<h2 class="qs-title">' . esc_html( $s['title'] ) . '</h2>';
@@ -468,7 +468,7 @@ class QS_Render {
 
 		$html = '<section class="qs-card qs-form">';
 		$html .= '<h3>Quadra la teva agenda</h3>';
-		$html .= '<p class="qs-hint">Escriu el teu nom i, per a cada franja horària, tria: <span class="qs-chip qs-f2">Sí</span> <span class="qs-chip qs-f1">Potser</span> <span class="qs-chip qs-f0">No</span> <span class="qs-chip qs-fx">—</span>. Desa cada setmana abans de canviar de setmana o de mes.</p>';
+		$html .= '<p class="qs-hint">Escriu el teu nom i, per a cada franja horària, tria: <span class="qs-chip qs-f2">Sí</span> <span class="qs-chip qs-f1">Potser</span> <span class="qs-chip qs-f0">No</span> <span class="qs-chip qs-fx">—</span>. Pots canviar de setmana i de mes sense perdre res: es recorda al teu navegador i, en desar, s’envia tot de cop.</p>';
 
 		if ( $just_saved && $edit ) {
 			$html .= '<p class="qs-status qs-ok" role="status">La teva disponibilitat s’ha desat correctament ✓</p>';
@@ -540,7 +540,7 @@ class QS_Render {
 
 			$html .= '<div class="qs-savebar">';
 			$html .= '<button type="submit" class="qs-btn">Desar la meva disponibilitat</button>';
-			$html .= '<span class="qs-savenote">es desen tots els dies d’aquesta setmana</span>';
+			$html .= '<span class="qs-savenote">es desa allò que has marcat, de tots els mesos</span>';
 			$html .= '</div>';
 		}
 
